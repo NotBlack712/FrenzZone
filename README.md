@@ -1,4 +1,4 @@
-# Local Social
+# Local Social ( Open Source for Learning, Not business purpose )
 
 A simple, modern social chatting website that runs **entirely on your own computer**. Built with Node.js, Express, Socket.IO and SQLite — no cloud database, no external services, no internet connection required once dependencies are installed.
 
