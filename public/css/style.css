@@ -1,0 +1,1071 @@
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --border: #e5e8f0;
+  --text: #1a1d29;
+  --text-muted: #6b7180;
+  --primary: #5b5ff0;
+  --primary-dark: #4548d6;
+  /* Fill tone for solid purple controls that carry WHITE text (primary
+     buttons, active nav pill, selected chat, sent message bubble). Kept
+     separate from --primary, which is used as TEXT on light surfaces and
+     therefore has to be brighter in dark mode. */
+  --primary-fill: #5b5ff0;
+  --danger: #e5484d;
+  --like: #ef4f6f;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 10px rgba(20, 20, 50, 0.06);
+  /* Sticky headers paint over scrolling content, so they need their own
+     translucent colour — per theme. Hardcoding white here is what kept the
+     header light (and the brand/nav unreadable) after switching to dark. */
+  --topbar-bg: rgba(255, 255, 255, 0.9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.hidden { display: none !important; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  /* Buttons don't inherit colour by default (UA paints them black), which
+     left chat names unreadable on the dark theme. Every button now starts
+     from its container's colour unless a class says otherwise. */
+  color: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  font-size: 15px;
+  /* Browsers default field text to black — unreadable on the dark theme,
+     so every field takes the theme's text colour (and placeholder tone). */
+  color: var(--text);
+}
+input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
+
+/* ---------------- Buttons ---------------- */
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary-fill); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn-danger { background: transparent; color: var(--danger); }
+.btn-ghost { background: transparent; color: var(--text-muted); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---------------- Auth ---------------- */
+.auth-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #eef0ff 0%, #f4f6fb 60%);
+}
+.auth-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 380px;
+  animation: fadeUp 0.35s ease;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { font-size: 22px; margin: 0; }
+.brand.small span { font-weight: 700; font-size: 16px; }
+.brand-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #8a8dff);
+  display: inline-block;
+}
+.auth-sub { color: var(--text-muted); font-size: 14px; margin: 8px 0 24px; }
+.auth-tabs { display: flex; gap: 6px; background: var(--bg); border-radius: 999px; padding: 4px; margin-bottom: 20px; }
+.auth-tab {
+  flex: 1; border: none; background: transparent; padding: 8px 0;
+  border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--text-muted);
+}
+.auth-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form input {
+  padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); outline: none;
+}
+.auth-form input:focus { border-color: var(--primary); }
+.form-error { color: var(--danger); font-size: 13px; min-height: 16px; margin: 0; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------------- App shell ---------------- */
+.app-view { min-height: 100vh; padding-bottom: 70px; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--topbar-bg); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-inner {
+  /* Wider than .content so the search field isn't crushed by the nav.
+     Stays on ONE line at every desktop width: the search is the only
+     flexible item, and the nav scrolls internally instead of wrapping —
+     adding the staff "Admin" button must never push the bar onto a
+     second row. (The 720px breakpoint below turns wrapping back on and
+     hides the desktop nav entirely.) */
+  max-width: 1040px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: nowrap;
+}
+.brand.small { cursor: pointer; flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
+
+.search-wrap { position: relative; flex: 1 1 140px; min-width: 110px; max-width: 320px; }
+.search-wrap input {
+  width: 100%; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--border);
+  outline: none; background: var(--bg);
+}
+.search-wrap input:focus { border-color: var(--primary); background: var(--surface); }
+.search-results {
+  position: absolute; top: 44px; left: 0; right: 0; background: var(--surface);
+  /* Never narrower than a readable result row, even when the input itself
+     is squeezed by the nav (usernames/bios were being clipped). */
+  min-width: 320px;
+  border-radius: var(--radius-sm); box-shadow: var(--shadow); border: 1px solid var(--border);
+  max-height: 320px; overflow-y: auto; z-index: 30;
+}
+
+.desktop-nav {
+  display: flex; gap: 3px; margin-left: auto;
+  /* Never wraps: on a narrow desktop window the row scrolls sideways
+     (hidden scrollbar) rather than dropping onto a second line. */
+  flex-wrap: nowrap; min-width: 0;
+  overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+}
+.desktop-nav::-webkit-scrollbar { display: none; }
+.nav-btn {
+  border: none; background: transparent; padding: 8px 10px; border-radius: 999px;
+  font-weight: 600; font-size: 13px; color: var(--text-muted);
+  white-space: nowrap; flex-shrink: 0;
+}
+.nav-btn:hover { background: var(--bg); color: var(--text); }
+.nav-btn.active { background: var(--primary-fill); color: white; }
+#logout-btn { color: var(--danger); }
+
+/* ---------- Verified badge (FrenzZone) ----------
+   Inline SVG seal — NOT an image file and NOT a background plate: it is only
+   ever drawn when the API returns users.is_verified = 1, and it inherits the
+   theme colour (--primary), so it stays legible in light and dark mode.
+   Sized in em so it scales with the name next to it (feed, profile title,
+   comments, chat list, admin tables). */
+.verified-badge {
+  display: inline-block;
+  width: 1em; height: 1em;
+  margin-left: 4px;
+  vertical-align: -0.14em;
+  line-height: 0;
+  color: var(--primary); /* the scalloped seal */
+}
+.verified-badge svg { display: block; width: 100%; height: 100%; }
+/* h2/h3 titles: keep the seal aligned with the (larger) text baseline. */
+h2 .verified-badge, h1 .verified-badge { margin-left: 6px; }
+/* Unread message count on the Chats/Messages nav item (desktop + mobile).
+   Red circle, white number, hidden entirely at zero. */
+.nav-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px;
+  background: var(--danger); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  border-radius: 999px;
+}
+/* Desktop shows the labelled "Settings" nav button; this gear is the
+   mobile-only replacement (see the 720px media query below). */
+.settings-trigger { display: none; }
+
+.content { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+/* Chat needs two panes side by side, so that view gets the wider container. */
+.content.content-wide { max-width: 1000px; }
+.view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.view-header h2 { font-size: 19px; margin: 0; }
+.view-header h3 { font-size: 16px; margin: 24px 0 12px; color: var(--text-muted); }
+
+/* ---------------- Cards / Feed ---------------- */
+.card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 18px; margin-bottom: 14px; animation: fadeUp 0.25s ease;
+}
+
+.post-card { display: flex; flex-direction: column; gap: 10px; }
+.post-head { display: flex; align-items: center; gap: 10px; }
+.avatar {
+  width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #dfe2f0;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); flex-shrink: 0;
+}
+.avatar.sm { width: 30px; height: 30px; font-size: 12px; }
+.post-user { display: flex; flex-direction: column; }
+.post-username { font-weight: 700; font-size: 14.5px; cursor: pointer; }
+.post-username:hover { text-decoration: underline; }
+.post-time { font-size: 12px; color: var(--text-muted); }
+.post-delete { margin-left: auto; }
+
+.post-text { font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.post-media { width: 100%; border-radius: var(--radius-sm); max-height: 480px; object-fit: cover; background: #000; }
+
+.post-actions { display: flex; gap: 18px; border-top: 1px solid var(--border); padding-top: 10px; }
+.action-btn {
+  border: none; background: transparent; display: flex; align-items: center; gap: 6px;
+  font-size: 13.5px; color: var(--text-muted); font-weight: 600; padding: 4px 2px;
+}
+.action-btn.liked { color: var(--like); }
+.action-btn:hover { color: var(--text); }
+.action-btn.liked:hover { color: var(--like); }
+.action-btn.share-btn:hover { color: var(--primary); }
+
+.comments-section { display: flex; flex-direction: column; gap: 10px; }
+.comment-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.comment-row { display: flex; gap: 8px; align-items: flex-start; }
+.comment-bubble { background: var(--bg); border-radius: var(--radius-sm); padding: 8px 12px; flex: 1; }
+.comment-user { font-weight: 700; font-size: 13px; }
+.comment-text { font-size: 13.5px; margin-top: 2px; word-break: break-word; }
+.comment-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.comment-delete { color: var(--danger); font-size: 11px; background: none; border: none; margin-left: auto; }
+.comment-form { display: flex; gap: 8px; }
+.comment-form input {
+  flex: 1; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--border); outline: none;
+}
+.comment-form input:focus { border-color: var(--primary); }
+.comment-form button { padding: 8px 16px; }
+
+/* ---------------- Composer (create post) ---------------- */
+.composer {
+  display: flex; flex-direction: column; gap: 12px; position: relative;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.composer.is-dragging {
+  border: 2px dashed var(--primary);
+  box-shadow: 0 0 0 4px rgba(91, 95, 240, 0.12);
+}
+#post-text {
+  width: 100%; border: none; outline: none; resize: none; background: transparent;
+  font-size: 16px; line-height: 1.5; color: var(--text); padding: 4px 2px;
+  min-height: 52px; max-height: 200px; overflow-y: auto;
+}
+#post-text::placeholder { color: var(--text-muted); }
+
+/* Selected media, with a one-tap remove. */
+.media-preview {
+  position: relative; border-radius: var(--radius-sm); overflow: hidden;
+  background: var(--bg); animation: fadeUp 0.18s ease;
+}
+.preview-inner img, .preview-inner video {
+  display: block; width: 100%; max-height: 340px; object-fit: contain; background: #000;
+}
+.preview-remove {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px;
+  border: none; border-radius: 50%; background: rgba(15, 17, 30, 0.7);
+  color: #fff; font-size: 14px; line-height: 1; backdrop-filter: blur(4px);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.preview-remove:hover { background: var(--danger); transform: scale(1.06); }
+
+/* Drag & drop target — only visible while a file is over the composer. */
+.drop-hint {
+  display: none; align-items: center; justify-content: center;
+  border: 2px dashed var(--primary); border-radius: var(--radius-sm);
+  background: rgba(91, 95, 240, 0.07); color: var(--primary);
+  font-size: 13.5px; font-weight: 600; padding: 26px 14px;
+}
+.composer.is-dragging .drop-hint { display: flex; }
+
+/* Toolbar: tools left, submit right. */
+.composer-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding-top: 10px;
+}
+.composer-tools { display: flex; gap: 4px; flex-wrap: wrap; }
+.tool-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: transparent; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; padding: 7px 10px; border-radius: 999px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.tool-btn:hover:not(:disabled) { background: rgba(91, 95, 240, 0.1); color: var(--primary); }
+.tool-btn:active:not(:disabled) { transform: scale(0.96); }
+.tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.composer-submit { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.composer-submit .form-error { text-align: right; }
+#post-submit { min-width: 84px; }
+.btn-spin {
+  display: inline-block; width: 13px; height: 13px; vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, 0.45); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px;
+}
+
+/* Indeterminate-until-known upload progress. */
+.upload-progress {
+  width: 120px; height: 6px; border-radius: 999px;
+  background: var(--border); overflow: hidden; flex-shrink: 0;
+}
+.upload-progress-bar {
+  height: 100%; width: 0; border-radius: 999px; background: var(--primary);
+  transition: width 0.18s ease;
+}
+
+/* Emoji picker */
+.emoji-picker {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow);
+  padding: 8px; margin-top: 8px; max-width: 340px;
+}
+.emoji-item {
+  border: none; background: transparent; font-size: 20px; line-height: 1;
+  padding: 7px 0; border-radius: 8px; transition: background 0.12s ease, transform 0.1s ease;
+}
+.emoji-item:hover { background: var(--bg); transform: scale(1.15); }
+
+/* ---------------- Search ---------------- */
+.mobile-search-input {
+  width: 100%; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--border);
+  outline: none; margin-bottom: 14px;
+}
+.user-list { display: flex; flex-direction: column; gap: 8px; }
+.user-row {
+  display: flex; align-items: center; gap: 12px; background: var(--surface);
+  border-radius: var(--radius-sm); padding: 10px 14px; box-shadow: var(--shadow); cursor: pointer;
+}
+.user-row .user-meta { display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1; }
+/* Long usernames ellipsis instead of being sliced mid-character. */
+.user-row .user-meta strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-row .user-bio { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------------- Profile ---------------- */
+/* Card = banner on top + header row underneath.
+   NO overflow:hidden on the card: it also contains the avatar, which must
+   never be clipped. Only the banner clips (see below). */
+.profile-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  margin-bottom: 14px; animation: fadeUp 0.25s ease;
+}
+
+/* The banner is the only element allowed to clip — that keeps its own rounded
+   top corners square-free while leaving everything below it untouched. */
+.profile-banner {
+  position: relative; z-index: 0; width: 100%;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+}
+
+/* Fixed banner area: never stretches the layout, crops instead (object-fit). */
+.banner-img {
+  display: block; width: 100%; height: 200px;
+  object-fit: cover; background: var(--border);
+}
+/* Default banner for accounts that never uploaded one — always renders
+   something clean, never a broken image. */
+.banner-img.banner-default {
+  background: linear-gradient(120deg, #5b5ff0 0%, #8a8dff 45%, #b9bbff 100%);
+}
+.banner-img.banner-default::after { content: none; }
+
+.banner-edit-btn {
+  position: absolute; top: 12px; right: 12px;
+  border: none; border-radius: 999px; padding: 7px 14px;
+  background: rgba(255,255,255,0.92); color: var(--text);
+  font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow);
+}
+.banner-edit-btn:hover { background: #fff; }
+
+.profile-header {
+  padding: 18px 24px 22px; display: flex; gap: 18px; align-items: flex-start;
+  flex-wrap: wrap; border-radius: 0; box-shadow: none; margin-bottom: 0;
+  background: transparent;
+}
+/* The banner is position:relative, so a static avatar is painted UNDERNEATH
+   it (CSS 2.1 paint order: positioned elements paint above in-flow ones).
+   position:relative + z-index:2 puts the avatar on top; the reduced negative
+   margin drops it so the whole circle stays visible while still overlapping
+   the banner's bottom edge. */
+.profile-header .avatar {
+  width: 72px; height: 72px; font-size: 24px;
+  border: 4px solid var(--surface);
+  margin-top: -38px;
+  position: relative; z-index: 2;
+}
+.profile-info { flex: 1; min-width: 220px; }
+.profile-info h2 { margin: 0 0 4px; font-size: 19px; }
+.profile-info .bio { color: var(--text); font-size: 14px; margin: 4px 0; }
+.profile-info .meta { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; }
+
+/* Followers / Following counters — clickable buttons, real DB numbers. */
+.follow-stats { display: flex; gap: 18px; margin: 10px 0 4px; flex-wrap: wrap; }
+.follow-stat {
+  border: none; background: transparent; padding: 4px 0;
+  font-size: 13.5px; color: var(--text-muted); font-weight: 600;
+}
+.follow-stat strong { color: var(--text); font-size: 15px; }
+.follow-stat:hover strong { color: var(--primary); }
+.follow-stat:hover { text-decoration: underline; }
+
+.profile-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.follow-btn { min-width: 110px; }
+
+.profile-edit-card { display: flex; flex-direction: column; gap: 10px; }
+.profile-edit-card input, .profile-edit-card textarea {
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; outline: none;
+}
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: #35c759; display: inline-block; margin-left: 6px; }
+
+/* ---------------- Modals (followers / following / banner) ---------------- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 17, 30, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 60; animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  width: 100%; max-width: 440px; max-height: 80vh; display: flex; flex-direction: column;
+  padding: 18px; animation: fadeUp 0.2s ease;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; flex-shrink: 0;
+}
+.modal-head h3 { margin: 0; font-size: 17px; }
+.modal-close {
+  border: none; background: var(--bg); width: 30px; height: 30px; border-radius: 50%;
+  font-size: 14px; color: var(--text-muted);
+}
+.modal-close:hover { background: var(--border); color: var(--text); }
+#follow-list-body { overflow-y: auto; }
+
+/* User rows inside the followers/following modal */
+.follow-user-row { position: relative; padding-right: 96px; }
+.follow-user-row .user-meta { flex: 1; min-width: 0; }
+.row-follow-btn {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  padding: 6px 16px; font-size: 12.5px;
+}
+.btn-xs { padding: 6px 16px; font-size: 12.5px; }
+
+/* ---------------- Banner editor ---------------- */
+.banner-preview-wrap {
+  width: 100%; height: 130px; border-radius: var(--radius-sm);
+  overflow: hidden; background: var(--bg); margin-bottom: 10px;
+}
+.banner-preview-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.banner-hint { font-size: 12.5px; color: var(--text-muted); margin: 0 0 8px; }
+#banner-file { font-size: 13px; margin-bottom: 6px; }
+.modal-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-top: 10px; flex-wrap: wrap;
+}
+.modal-actions-right { display: flex; gap: 8px; margin-left: auto; }
+
+/* ---------- Reusable confirmation dialog ---------- */
+.confirm-card { max-width: 380px; }
+.confirm-body {
+  margin: 0 0 4px; font-size: 14.5px; line-height: 1.55; color: var(--text-muted);
+}
+.confirm-body b { color: var(--text); font-weight: 700; }
+.confirm-ok { background: var(--danger); color: #fff; }
+.confirm-ok:hover { filter: brightness(0.93); }
+.confirm-ok:disabled { opacity: 0.6; }
+#banner-error { min-height: 18px; margin-top: 6px; }
+
+/* ---------------- Share menu ---------------- */
+.share-card { max-width: 360px; }
+.share-link {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  font-size: 13px; color: var(--text-muted); word-break: break-all;
+  user-select: all; margin-bottom: 12px;
+}
+.share-actions { display: flex; gap: 8px; }
+.share-option {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: var(--radius-sm); padding: 11px 12px;
+  font-size: 13.5px; font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.share-option:hover { background: rgba(91, 95, 240, 0.08); border-color: var(--primary); }
+.share-option:active { transform: scale(0.98); }
+.share-ico { font-size: 15px; }
+.share-note {
+  margin: 10px 0 0; font-size: 12.5px; color: var(--primary);
+  min-height: 16px; text-align: center; font-weight: 600;
+}
+
+/* ---------------- Logged-out share link (/post/:id) ---------------- */
+.public-post-view { min-height: 100vh; background: var(--bg); }
+.public-bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 20px; background: var(--topbar-bg);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+}
+.public-main { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* ---------------- Empty / loading ---------------- */
+.empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 14px; }
+.spinner {
+  width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------------- Toast ---------------- */
+.toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: #1a1d29; color: white; padding: 10px 18px; border-radius: 999px;
+  font-size: 13.5px; z-index: 100; box-shadow: var(--shadow); animation: fadeUp 0.2s ease;
+}
+
+/* ---------------- Mobile nav ---------------- */
+.mobile-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface);
+  border-top: 1px solid var(--border); justify-content: space-around; padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+  z-index: 30;
+}
+.mnav-btn {
+  border: none; background: transparent; display: flex; flex-direction: column; align-items: center;
+  gap: 2px; font-size: 11px; color: var(--text-muted); padding: 6px 10px; border-radius: 10px;
+}
+.mnav-btn.active { color: var(--primary); }
+.mnav-icon { font-size: 19px; }
+
+@media (max-width: 720px) {
+  .desktop-nav { display: none; }
+  /* Settings entry moves to the top-left, in front of the brand. */
+  .settings-trigger { display: inline-flex; align-items: center; justify-content: center; }
+  .mobile-nav { display: flex; }
+  .content { padding-bottom: 90px; }
+  .topbar-inner { flex-wrap: wrap; }
+  .search-wrap { display: none; }
+
+  /* Profile: banner shrinks, header stacks, counters wrap cleanly. */
+  .banner-img { height: 130px; }
+  .profile-header { padding: 14px 16px 18px; gap: 12px; }
+  .profile-header .avatar { width: 60px; height: 60px; font-size: 20px; margin-top: -32px; }
+  .profile-info { min-width: 0; width: 100%; }
+  .follow-stats { gap: 14px; }
+  .banner-edit-btn { top: 8px; right: 8px; padding: 6px 12px; font-size: 12px; }
+
+  /* Composer + share menu stay compact on small screens. */
+  .composer-toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .composer-tools { justify-content: space-between; }
+  .tool-btn { flex: 1; justify-content: center; padding: 8px 4px; font-size: 12.5px; gap: 4px; }
+  .composer-submit { margin-left: 0; justify-content: space-between; width: 100%; }
+  .composer-submit .form-error { text-align: left; flex: 1; }
+  .upload-progress { width: 80px; }
+  .emoji-picker { max-width: none; width: 100%; grid-template-columns: repeat(8, 1fr); }
+  .share-actions { flex-direction: column; }
+  .share-card { max-width: 100%; }
+
+  /* Modals stay usable on small screens. */
+  .modal-card { max-width: 100%; max-height: 85vh; }
+  .modal-actions { flex-direction: column; align-items: stretch; }
+  .modal-actions-right { margin-left: 0; justify-content: flex-end; }
+  .follow-user-row { padding-right: 88px; }
+}
+
+@media (min-width: 721px) and (max-width: 960px) {
+  /* Tablet: banner keeps its proportions without stretching the card. */
+  .banner-img { height: 170px; }
+}
+
+/* ---------------- Profile links ---------------- */
+/* Every clickable user element is a real <a href="/profile/<user id>">, so a
+   link always carries the target author's id — never the viewer's. */
+a[data-profile-id] { color: inherit; text-decoration: none; cursor: pointer; }
+.post-avatar-link, .comment-avatar-link { display: block; flex-shrink: 0; }
+a.post-avatar-link:hover, a.comment-avatar-link:hover, a.user-row:hover { text-decoration: none; }
+.comment-user { display: block; }
+.comment-user:hover { text-decoration: underline; }
+
+/* ---------------- Topbar actions / notifications ---------------- */
+.topbar-actions {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  margin-left: auto;
+  /* Lets the nav shrink/scroll instead of forcing the whole bar onto a
+     second line when a staff account adds the extra "Admin" item. */
+  min-width: 0; flex-shrink: 1;
+}
+.topbar-actions .desktop-nav { margin-left: 0; }
+
+.icon-btn {
+  position: relative; border: none; background: transparent; width: 36px; height: 36px;
+  border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--text-muted); flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--bg); color: var(--text); }
+
+.badge {
+  position: absolute; top: 1px; right: 0;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+  background: var(--danger); color: #fff; font-size: 10px; font-weight: 700;
+  line-height: 16px; text-align: center; box-sizing: border-box;
+}
+.notif-ico { filter: grayscale(0.15); }
+
+.notif-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 40;
+  width: min(340px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow);
+}
+.notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-weight: 700; font-size: 14px;
+}
+.notif-list { padding: 6px; }
+.notif-item { padding: 10px; border-radius: var(--radius-sm); }
+.notif-item + .notif-item { margin-top: 2px; }
+.notif-item:hover { background: var(--bg); }
+.notif-top { display: flex; gap: 10px; align-items: flex-start; }
+.notif-text { font-size: 13.5px; line-height: 1.4; flex: 1; min-width: 0; }
+.notif-text b { font-weight: 700; }
+.notif-actions { display: flex; gap: 8px; margin-top: 8px; }
+.notif-actions .btn { padding: 6px 14px; font-size: 12.5px; }
+.link-btn {
+  border: none; background: transparent; color: var(--primary);
+  font-size: 12.5px; font-weight: 600; padding: 4px; border-radius: 6px;
+}
+.link-btn:hover { background: var(--bg); }
+
+.empty-state.small { padding: 16px 10px; font-size: 13px; }
+.muted { color: var(--text-muted); font-weight: 400; }
+.count-pill {
+  background: var(--border); color: var(--text-muted); border-radius: 999px;
+  padding: 4px 12px; font-size: 12.5px; font-weight: 700;
+}
+
+/* ---------------- Friends page ---------------- */
+.search-box {
+  width: 100%; padding: 11px 16px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface);
+  outline: none; margin-bottom: 14px; font-size: 14.5px;
+}
+.search-box:focus { border-color: var(--primary); }
+
+.req-card { padding: 14px; margin-bottom: 16px; }
+.req-block + .req-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.req-title { margin: 0 0 10px; font-size: 14px; color: var(--text-muted); font-weight: 700; }
+
+.friend-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+}
+.friend-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+}
+.friend-card .avatar { width: 64px; height: 64px; font-size: 22px; margin: 0; }
+.friend-name { font-weight: 700; font-size: 15px; margin-top: 8px; }
+.friend-handle { font-size: 13px; color: var(--text-muted); }
+.friend-status { font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #b8bcc8; display: inline-block; }
+.dot.on { background: #22c55e; }
+.friend-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+
+.friend-row-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
+.friend-row-actions .btn { padding: 7px 14px; font-size: 12.5px; }
+.req-sent {
+  background: var(--border); color: var(--text-muted); border-radius: 999px;
+  padding: 7px 14px; font-size: 12.5px; font-weight: 600;
+}
+
+/* Profile page: friendship controls sit beside Follow */
+.profile-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.profile-actions .friend-slot { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------------- Chats ---------------- */
+.chat-layout {
+  display: grid; grid-template-columns: 300px 1fr; gap: 14px;
+  height: min(72vh, 640px); min-height: 420px;
+}
+.chat-side {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden;
+}
+.chat-side-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 14px 14px 10px;
+}
+.chat-side-head h2 { margin: 0; font-size: 18px; }
+.chat-side .search-box { margin: 0 12px 10px; padding: 9px 14px; font-size: 14px; }
+.chat-list { flex: 1; overflow-y: auto; padding: 4px 8px 10px; }
+
+.chat-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: none; background: transparent; padding: 9px 8px; border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.chat-item:hover { background: var(--bg); }
+.chat-item.active { background: var(--primary-fill); color: #fff; }
+/* Full white, not 80%: white-on-primary only clears 4.5:1 at full opacity. */
+.chat-item.active .chat-item-sub, .chat-item.active .chat-item-last { color: #fff; }
+.chat-item .avatar { flex-shrink: 0; }
+.chat-item-body { flex: 1; min-width: 0; }
+.chat-item-top { display: flex; align-items: baseline; gap: 6px; }
+.chat-item-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-item-time { margin-left: auto; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.chat-item.active .chat-item-time { color: #fff; }
+.chat-item-last {
+  font-size: 12.5px; color: var(--text-muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+}
+/* Unread count beside each conversation — same red/white treatment as the
+   nav badge, so "new messages" always reads as one colour across the app. */
+.chat-item-badge {
+  background: var(--danger); color: #fff; border-radius: 999px; min-width: 20px;
+  padding: 0 6px; height: 20px; line-height: 20px; text-align: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.chat-item.active .chat-item-badge { background: #fff; color: var(--danger); }
+
+.chat-main {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden;
+  min-width: 0;
+}
+.chat-empty { margin: auto; }
+.chat-thread { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.thread-head {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.thread-back { display: none; }
+.thread-avatar .avatar { width: 38px; height: 38px; font-size: 14px; margin: 0; }
+.thread-meta { flex: 1; min-width: 0; }
+.thread-name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread-sub { font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+
+.typing-line {
+  height: 18px; padding: 2px 14px 0; font-size: 12px; color: var(--text-muted);
+  font-style: italic; flex-shrink: 0;
+}
+
+.thread-msgs {
+  flex: 1; overflow-y: auto; padding: 8px 14px 12px;
+  display: flex; flex-direction: column; gap: 8px; min-height: 0;
+}
+.msg { display: flex; gap: 8px; align-items: flex-end; max-width: 78%; }
+.msg .avatar { width: 26px; height: 26px; font-size: 10px; margin: 0; flex-shrink: 0; }
+.msg-bubble {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 8px 12px; border-radius: 16px 16px 16px 4px;
+  font-size: 14.2px; line-height: 1.45; word-wrap: break-word; overflow-wrap: anywhere;
+}
+.msg-sender { font-size: 11.5px; font-weight: 700; color: var(--primary); margin-bottom: 2px; }
+.msg-time { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+.msg.mine { align-self: flex-end; flex-direction: row-reverse; }
+.msg.mine .msg-bubble {
+  background: var(--primary-fill); border-color: var(--primary-fill); color: #fff;
+  border-radius: 16px 16px 4px 16px;
+}
+.msg.mine .msg-time { text-align: right; color: var(--text-muted); }
+.msg.grouped { margin-top: -4px; }
+.msg.grouped .avatar, .msg.grouped .msg-sender { visibility: hidden; height: 0; margin: 0; }
+.msg-divider { text-align: center; font-size: 11.5px; color: var(--text-muted); margin: 6px 0 2px; }
+.load-older {
+  align-self: center; border: none; background: transparent; color: var(--primary);
+  font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 999px;
+}
+.load-older:hover { background: var(--bg); }
+
+.thread-form {
+  display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border);
+  flex-shrink: 0; background: var(--surface);
+}
+.thread-form input {
+  flex: 1; min-width: 0; padding: 10px 16px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg); outline: none; font-size: 14.5px;
+}
+.thread-form input:focus { border-color: var(--primary); background: var(--surface); }
+
+/* ---------------- Group create / members ---------------- */
+.field-label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
+.text-input {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg); outline: none;
+}
+.text-input:focus { border-color: var(--primary); background: var(--surface); }
+
+.group-avatar-row { display: flex; align-items: center; gap: 12px; }
+.group-avatar-row input[type=file] { font-size: 13px; flex: 1; min-width: 0; }
+.avatar-lg { width: 52px; height: 52px; font-size: 18px; margin: 0; }
+
+.check-list { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.check-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer;
+  font-size: 14px;
+}
+.check-row:hover { background: var(--bg); }
+.check-row + .check-row { border-top: 1px solid var(--border); }
+.check-row input { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+.check-row .avatar { width: 30px; height: 30px; font-size: 12px; margin: 0; flex-shrink: 0; }
+.check-row span.label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.members-list { max-height: 320px; overflow-y: auto; }
+.member-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.member-row:last-child { border-bottom: none; }
+.member-row .avatar { width: 34px; height: 34px; font-size: 13px; margin: 0; }
+.member-info { flex: 1; min-width: 0; }
+.member-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-sub { font-size: 12px; color: var(--text-muted); }
+.role-chip {
+  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--border); color: var(--text-muted); text-transform: capitalize;
+}
+.role-chip.owner { background: #fde68a; color: #7a5b00; }
+.role-chip.admin { background: #dbe4ff; color: #3746b8; }
+.member-tools { display: flex; gap: 4px; flex-shrink: 0; }
+.member-tools .btn { padding: 5px 10px; font-size: 11.5px; }
+
+.member-toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.rename-row { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ---------------- Mobile: chats + nav ---------------- */
+/* Small structural helpers used by the friend + chat markup. */
+.msg-body { display: flex; flex-direction: column; min-width: 0; }
+.msg.mine .msg-body { align-items: flex-end; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.req-user-row .user-meta { flex: 1; min-width: 0; }
+.chat-item-body { display: block; }
+.chat-item-last { display: block; }
+.chat-item-top { display: flex; align-items: center; }
+.thread-avatar { display: block; flex-shrink: 0; }
+.friend-card a.post-avatar-link:hover { text-decoration: none; }
+.friend-card .avatar { margin: 0; }
+.empty-state.small { padding: 14px 10px; }
+
+@media (max-width: 720px) {
+  .mnav-btn { padding: 6px 5px; font-size: 10.5px; gap: 2px; }
+  .mnav-icon { font-size: 18px; }
+  .mobile-nav { padding-left: 2px; padding-right: 2px; }
+
+  .notif-panel { right: -4px; width: calc(100vw - 24px); }
+
+  .friend-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .friend-card { padding: 14px 10px; }
+  .friend-card .avatar { width: 56px; height: 56px; font-size: 20px; }
+  .friend-row-actions { margin-left: 0; }
+  .user-row { flex-wrap: wrap; }
+
+  .chat-layout { grid-template-columns: 1fr; height: calc(100vh - 235px); min-height: 340px; }
+  .chat-layout:not(.thread-open) .chat-main { display: none; }
+  .chat-layout.thread-open .chat-side { display: none; }
+  .thread-back { display: inline-flex; }
+  .thread-head { padding: 9px 8px; }
+  .msg { max-width: 88%; }
+  .thread-form input { padding: 9px 14px; font-size: 16px; /* stops iOS zoom-on-focus */ }
+  .check-list { max-height: 40vh; }
+  .members-list { max-height: 45vh; }
+}
+
+/* ========================================================================
+   THEME
+   ------------------------------------------------------------------------
+   data-theme is written onto <html> by a tiny inline script in index.html
+   BEFORE first paint (so there is never a light flash), and kept in sync by
+   applyTheme() in app.js. "System" is resolved to light/dark in JS, which
+   means CSS only ever has to understand two values — no media queries, no
+   guessing, and the same rule applies to <html> whether the choice came from
+   localStorage (logged out) or from the saved server preference (logged in).
+
+   Palette notes (dark): the step from --bg → --surface → --border mirrors the
+   light theme's step (page → card → outline), so cards stay clearly separated
+   from the page and every border is actually visible instead of disappearing
+   into a flat near-black.
+   ====================================================================== */
+:root[data-theme="dark"] {
+  --bg: #0d1017;
+  --surface: #191e2a;
+  --border: #2c3344;
+  --text: #edeff7;
+  --text-muted: #a7afc4;
+  --primary: #8b8ff8;
+  --primary-fill: #6266e8;
+  --primary-dark: #5458e0;
+  --danger: #ff6b71;
+  --like: #ff7b90;
+  --topbar-bg: rgba(25, 30, 42, 0.9);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+/* A few components carry literal light colours instead of a variable;
+   overridden here so dark mode is complete, not just "mostly dark". */
+:root[data-theme="dark"] .avatar { background: #272d3d; color: var(--primary); }
+:root[data-theme="dark"] .empty-state { color: var(--text-muted); }
+:root[data-theme="dark"] .auth-view { background: linear-gradient(135deg, #151932 0%, #0d1017 60%); }
+/* Filled controls use --primary-fill (above) so WHITE text always sits on a
+   deep enough purple; --primary stays the brighter accent for text/icons. */
+/* Banner edit button sits on the banner, but its label follows --text. */
+:root[data-theme="dark"] .banner-edit-btn { background: rgba(25, 30, 42, 0.92); color: var(--text); }
+:root[data-theme="dark"] .banner-edit-btn:hover { background: #242a39; }
+/* Toast needs an edge when the page behind it is the same darkness. */
+:root[data-theme="dark"] .toast { background: #242a39; border: 1px solid var(--border); }
+/* Role chips are light-tinted pills; retint them so they don't glare. */
+:root[data-theme="dark"] .role-chip.owner { background: #453a17; color: #fbd36b; }
+:root[data-theme="dark"] .role-chip.admin { background: #26304f; color: #a9b8ff; }
+/* White on --danger only reaches ~2.8:1 when --danger is the bright dark-mode
+   red, so danger FILLS use a deeper tone — text labels keep --danger. */
+:root[data-theme="dark"] .confirm-ok,
+:root[data-theme="dark"] .badge,
+:root[data-theme="dark"] .preview-remove:hover { background: #cf3b41; }
+:root[data-theme="dark"] .check-row input { accent-color: var(--primary-fill); }
+
+/* ========================================================================
+   SETTINGS
+   ====================================================================== */
+.settings-layout { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 18px; align-items: start; }
+
+.settings-nav {
+  display: flex; flex-direction: column; gap: 3px;
+  position: sticky; top: 84px;
+}
+.settings-nav-btn {
+  text-align: left; border: 0; background: transparent; color: var(--text-muted);
+  padding: 10px 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.settings-nav-btn:hover { background: var(--surface); color: var(--text); }
+.settings-nav-btn.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+.settings-nav-btn.danger { color: var(--danger); }
+.settings-nav-btn.danger.active { background: var(--surface); color: var(--danger); }
+
+.settings-panel { display: none; }
+.settings-panel.active { display: block; animation: fadeUp 0.16s ease; }
+.settings-panel > h3 { font-size: 17px; margin: 0 0 4px; }
+.settings-panel > .panel-sub { color: var(--text-muted); font-size: 13.5px; margin: 0 0 16px; line-height: 1.5; }
+
+.settings-back {
+  display: none; align-items: center; gap: 6px; margin-bottom: 12px;
+  border: 0; background: transparent; color: var(--primary);
+  font-size: 14px; font-weight: 700; padding: 6px 0;
+}
+
+.settings-card { padding: 4px 18px 8px; margin-bottom: 16px; }
+.settings-card.pad { padding: 18px; }
+
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: 0; }
+.setting-row.top { align-items: flex-start; }
+.setting-label { font-size: 14.5px; font-weight: 650; }
+.setting-help { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+.setting-value { font-size: 14px; color: var(--text-muted); word-break: break-all; }
+
+/* Radio-style choice pills (profile visibility, theme, ...) */
+/* flex: 0 0 auto is the whole fix: the pill group never gets squeezed below
+   its content width, so it always stays on ONE line and the help text on the
+   left is what wraps instead. max-width only matters when the row is stacked
+   (mobile), where the group may then wrap gracefully rather than overflow. */
+.segmented {
+  display: inline-flex; gap: 3px; background: var(--bg); padding: 4px;
+  border-radius: 999px; flex: 0 0 auto; max-width: 100%; flex-wrap: wrap;
+}
+.segmented button {
+  border: 0; background: transparent; color: var(--text-muted);
+  padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 650;
+  white-space: nowrap;
+  transition: color 0.14s ease;
+}
+.segmented button:hover { color: var(--text); }
+.segmented button.on { background: var(--surface); color: var(--primary); box-shadow: var(--shadow); }
+
+/* Toggle switch */
+.switch { position: relative; width: 44px; height: 26px; flex: 0 0 auto; display: inline-block; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.switch .track { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: background 0.16s ease; }
+.switch .knob {
+  position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+  background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.16s ease;
+}
+.switch input:checked ~ .track { background: var(--primary-fill); }
+.switch input:checked ~ .knob { transform: translateX(18px); }
+.switch input:focus-visible ~ .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Password strength meter */
+.pw-meter { display: flex; align-items: center; gap: 10px; margin-top: 9px; font-size: 12.5px; }
+.pw-bars { display: flex; gap: 4px; flex: 1; max-width: 220px; }
+.pw-bar { height: 5px; flex: 1; background: var(--border); border-radius: 999px; transition: background 0.15s ease; }
+.pw-bar.on.weak { background: var(--danger); }
+.pw-bar.on.mid { background: #f5a623; }
+.pw-bar.on.strong { background: #2fbf71; }
+.pw-word { font-weight: 700; }
+.pw-word.weak { color: var(--danger); }
+.pw-word.mid { color: #f5a623; }
+.pw-word.strong { color: #2fbf71; }
+
+.stack { display: flex; flex-direction: column; gap: 10px; max-width: 380px; }
+.stack .btn { align-self: flex-start; }
+.form-note { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin: 6px 0 0; }
+
+/* Profile preview inside Settings */
+.settings-preview {
+  display: flex; gap: 14px; align-items: center;
+  padding: 14px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 16px;
+}
+.settings-preview .pv-name { font-weight: 700; font-size: 15px; }
+.settings-preview .pv-handle { font-size: 13px; color: var(--text-muted); }
+.settings-preview .pv-banner {
+  position: absolute; inset: 0; border-radius: var(--radius-sm); overflow: hidden; opacity: 0.28;
+}
+.pv-avatar-wrap { position: relative; z-index: 1; }
+.pv-banner-wrap { position: relative; }
+
+/* Active sessions */
+.session-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 13px 0; border-bottom: 1px solid var(--border);
+}
+.session-row:last-child { border-bottom: 0; }
+.session-title { font-size: 14px; font-weight: 650; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.session-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+.pill-current {
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  background: rgba(47, 191, 113, 0.14); color: #2fbf71;
+}
+
+/* Danger zone */
+.settings-card.danger-card { border-color: var(--danger); }
+.danger-title { color: var(--danger); }
+.danger-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+
+/* Mobile: sections become a drill-down list, panels get a back button. */
+@media (max-width: 760px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-nav { position: static; }
+  .settings-layout.drill .settings-nav { display: none; }
+  .settings-layout:not(.drill) .settings-panels { display: none; }
+  .settings-layout.drill .settings-back { display: inline-flex; }
+  .settings-card { padding: 4px 14px 6px; }
+  .setting-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .setting-row .segmented { align-self: flex-start; flex-wrap: nowrap; }
+  .setting-row .switch { align-self: flex-start; }
+  .segmented button { padding: 8px 11px; font-size: 12.5px; }
+}

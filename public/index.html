@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrenzZone</title>
+<!-- ?v= = asset version. Any HTML reload (which Cloudflare always serves
+     fresh) references a brand-new URL, so no browser or edge cache can ever
+     serve a stale copy of the frontend after a code change. -->
+<link rel="stylesheet" href="/css/style.css?v=__ASSET_VERSION__">
+<link rel="stylesheet" href="/css/admin.css?v=__ASSET_VERSION__">
+<!-- Applies the saved theme BEFORE first paint, so opening the site in dark
+     mode never flashes white. Runs before any other script and never throws
+     (private browsing can make localStorage unusable). -->
+<script>
+  try {
+    var t = localStorage.getItem('frenza.theme') || 'system';
+    var dark = t === 'dark' || (t === 'system' &&
+      window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  } catch (e) { /* fall back to light */ }
+</script>
+</head>
+<body>
+
+<!-- ===================== AUTH VIEW ===================== -->
+<div id="auth-view" class="auth-view">
+  <div class="auth-card">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h1>FrenzZone</h1>
+    </div>
+    <p class="auth-sub">Share what's on your mind with the people who matter.</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Log In</button>
+      <button class="auth-tab" data-tab="register">Register</button>
+    </div>
+
+    <form id="login-form" class="auth-form">
+      <input type="text" id="login-identifier" placeholder="Username or email" autocomplete="username" required>
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="btn btn-primary">Log In</button>
+      <p class="form-error" id="login-error"></p>
+    </form>
+
+    <form id="register-form" class="auth-form hidden">
+      <input type="text" id="register-username" placeholder="Username" autocomplete="username" required>
+      <input type="email" id="register-email" placeholder="Email" autocomplete="email" required>
+      <input type="password" id="register-password" placeholder="Password (min 6 characters)" autocomplete="new-password" required>
+      <button type="submit" class="btn btn-primary">Create Account</button>
+      <p class="form-error" id="register-error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- Logged-out visitor who followed a /post/:id share link -->
+<div id="public-post-view" class="public-post-view hidden">
+  <header class="public-bar">
+    <div class="brand small">
+      <span class="brand-dot"></span>
+      <span>FrenzZone</span>
+    </div>
+    <button class="btn btn-primary btn-xs" id="public-login-btn">Log in</button>
+  </header>
+  <main class="public-main">
+    <div id="public-post" class="feed-list"></div>
+  </main>
+</div>
+
+<!-- ===================== APP VIEW ===================== -->
+<div id="app-view" class="app-view hidden">
+
+  <!-- Desktop top nav -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <!-- Mobile: the desktop nav collapses at 720px, so Settings gets its
+           own trigger pinned to the top-LEFT. Desktop uses the labelled
+           "Settings" button in the nav (top-right) instead, so only one of
+           the two is ever visible. -->
+      <button class="nav-btn settings-trigger" data-nav="settings" aria-label="Settings" title="Settings">⚙️</button>
+
+      <div class="brand small" data-nav="feed">
+        <span class="brand-dot"></span>
+        <span>FrenzZone</span>
+      </div>
+
+      <div class="search-wrap">
+        <input type="text" id="search-input" placeholder="Search users...">
+        <div id="search-results" class="search-results hidden"></div>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- Friend-request notifications (live via Socket.IO) -->
+        <button class="icon-btn" id="notif-btn" aria-label="Notifications">
+          <span class="notif-ico">🔔</span>
+          <span class="badge hidden" id="notif-badge">0</span>
+        </button>
+        <div class="notif-panel hidden" id="notif-panel">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <span class="muted" style="font-size:12px;font-weight:500">Friend requests</span>
+          </div>
+          <div id="notif-list" class="notif-list">
+            <div class="empty-state small">No notifications.</div>
+          </div>
+        </div>
+
+        <nav class="desktop-nav">
+          <button class="nav-btn active" data-nav="feed">Home</button>
+          <button class="nav-btn" data-nav="create">Create Post</button>
+          <button class="nav-btn" data-nav="friends">Friends</button>
+          <button class="nav-btn" data-nav="chats">Chats<span class="nav-badge hidden" data-unread-badge></span></button>
+          <button class="nav-btn" data-nav="search">Search</button>
+          <button class="nav-btn" data-nav="profile">Profile</button>
+          <!-- Staff only: hidden until /api/auth/me says the account has a role -->
+          <button class="nav-btn admin-nav hidden" data-nav="admin">Admin</button>
+          <button class="nav-btn" data-nav="settings">Settings</button>
+          <button class="nav-btn" id="logout-btn">Logout</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- ---- Feed view ---- -->
+    <section id="view-feed" class="view">
+      <div class="view-header">
+        <h2>Home Feed</h2>
+      </div>
+      <div id="feed-list" class="feed-list">
+        <div class="empty-state" id="feed-empty">Loading feed...</div>
+      </div>
+    </section>
+
+    <!-- ---- Create post view ---- -->
+    <section id="view-create" class="view hidden">
+      <div class="view-header"><h2>Create Post</h2></div>
+
+      <form id="create-post-form" class="card composer" novalidate>
+        <textarea id="post-text" placeholder="What's on your mind?" maxlength="1000" rows="1"></textarea>
+
+        <div id="media-preview" class="media-preview hidden">
+          <div id="preview-inner" class="preview-inner"></div>
+          <button type="button" class="preview-remove" id="preview-remove" aria-label="Remove selected media">✕</button>
+        </div>
+
+        <div id="drop-hint" class="drop-hint">Drop your photo or video here</div>
+
+        <div class="composer-toolbar">
+          <div class="composer-tools">
+            <button type="button" class="tool-btn" data-tool="photo">📷<span>Photo</span></button>
+            <button type="button" class="tool-btn" data-tool="video">🎥<span>Video</span></button>
+            <button type="button" class="tool-btn" data-tool="emoji">😊<span>Emoji</span></button>
+            <button type="button" class="tool-btn" data-tool="media">📎<span>Media</span></button>
+          </div>
+          <div class="composer-submit">
+            <span id="create-post-error" class="form-error"></span>
+            <div id="upload-progress" class="upload-progress hidden" role="progressbar" aria-label="Upload progress">
+              <div id="upload-progress-bar" class="upload-progress-bar"></div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="post-submit">Post</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- One hidden input, retargeted per tool (Photo / Video / Media). -->
+      <input type="file" id="post-media" class="hidden" accept=".jpg,.jpeg,.png,.gif,.mp4,.webm">
+
+      <div id="emoji-picker" class="emoji-picker hidden" role="menu" aria-label="Emoji"></div>
+    </section>
+
+    <!-- ---- Single post view (/post/:id) ---- -->
+    <section id="view-post" class="view hidden">
+      <div class="view-header"><h2>Post</h2></div>
+      <div id="single-post" class="feed-list"></div>
+    </section>
+
+    <!-- ---- Search view ---- -->
+    <section id="view-search" class="view hidden">
+      <div class="view-header"><h2>Search Users</h2></div>
+      <input type="text" id="search-input-mobile" placeholder="Search users..." class="mobile-search-input">
+      <div id="search-list" class="user-list">
+        <div class="empty-state">Search for someone by username.</div>
+      </div>
+    </section>
+
+    <!-- ---- Profile view ---- -->
+    <section id="view-profile" class="view hidden">
+      <div class="profile-card">
+        <div id="profile-banner" class="profile-banner"></div>
+        <div id="profile-header" class="profile-header"></div>
+      </div>
+      <div id="profile-edit" class="card profile-edit-card hidden"></div>
+      <div class="view-header"><h3>Posts</h3></div>
+      <div id="profile-posts" class="feed-list"></div>
+    </section>
+
+    <!-- ---- Friends view (/friends) ---- -->
+    <section id="view-friends" class="view hidden">
+      <div class="view-header">
+        <h2>Friends</h2>
+        <span class="count-pill" id="friends-count"></span>
+      </div>
+
+      <input type="text" id="friend-search" class="search-box" placeholder="Search friends..." autocomplete="off">
+
+      <!-- Incoming requests get Accept / Reject, outgoing get Cancel. -->
+      <div id="friend-requests" class="card req-card hidden">
+        <div class="req-block hidden" id="incoming-block">
+          <h3 class="req-title">Friend requests</h3>
+          <div id="incoming-list" class="user-list"></div>
+        </div>
+        <div class="req-block hidden" id="outgoing-block">
+          <h3 class="req-title">Sent requests</h3>
+          <div id="outgoing-list" class="user-list"></div>
+        </div>
+      </div>
+
+      <div id="friends-list" class="friend-grid">
+        <div class="empty-state">Loading friends...</div>
+      </div>
+    </section>
+
+    <!-- ---- Chats view (/chats and /chats/:id) ---- -->
+    <section id="view-chats" class="view hidden">
+      <div id="chat-layout" class="chat-layout">
+
+        <aside class="chat-side">
+          <div class="chat-side-head">
+            <h2>Chats</h2>
+            <button type="button" class="btn btn-primary btn-xs" id="create-group-btn">Create Group</button>
+          </div>
+          <input type="text" id="chat-search" class="search-box" placeholder="Search chats..." autocomplete="off">
+          <div id="chat-list" class="chat-list">
+            <div class="empty-state">Loading chats...</div>
+          </div>
+        </aside>
+
+        <main class="chat-main">
+          <div id="chat-empty" class="empty-state chat-empty">
+            Select a conversation to start chatting.
+          </div>
+
+          <div id="chat-thread" class="chat-thread hidden">
+            <header class="thread-head">
+              <button type="button" class="icon-btn thread-back" id="thread-back" aria-label="Back to conversations">←</button>
+              <a class="thread-avatar" id="thread-avatar-link" data-profile-link><span class="avatar" id="thread-avatar"></span></a>
+              <div class="thread-meta">
+                <div class="thread-name" id="thread-name"></div>
+                <div class="thread-sub" id="thread-sub"></div>
+              </div>
+              <button type="button" class="icon-btn" id="thread-info" aria-label="Conversation info">ⓘ</button>
+            </header>
+
+            <div class="typing-line" id="typing-line"></div>
+            <div class="thread-msgs" id="thread-msgs"></div>
+
+            <form class="thread-form" id="thread-form" autocomplete="off">
+              <input type="text" id="thread-input" placeholder="Type a message..." maxlength="2000">
+              <button type="submit" class="btn btn-primary" id="thread-send">Send</button>
+            </form>
+          </div>
+        </main>
+
+      </div>
+    </section>
+
+  <!-- ===================== ADMIN PANEL (/admin) ===================== -->
+  <!-- Rendered entirely by public/js/admin.js; the server decides what the
+       panel may show (GET /api/admin/me), and a non-staff account that opens
+       /admin by hand gets a 403 on the very first request. -->
+  <section id="view-admin" class="view view-admin hidden"></section>
+
+  <!-- ===================== SETTINGS (/settings) ===================== -->
+  <!-- Data-driven: every control carries data-setting / data-flag, so one
+       generic handler reads and writes them. Adding a future option is a
+       new row of markup plus a new column — no new JS wiring. -->
+  <section id="view-settings" class="view hidden">
+    <div class="view-header"><h2>Settings</h2></div>
+
+    <div class="settings-layout" id="settings-layout">
+
+      <aside class="settings-nav" id="settings-nav">
+        <button type="button" class="settings-nav-btn active" data-section="account">Account</button>
+        <button type="button" class="settings-nav-btn" data-section="profile">Profile</button>
+        <button type="button" class="settings-nav-btn" data-section="privacy">Privacy</button>
+        <button type="button" class="settings-nav-btn" data-section="notifications">Notifications</button>
+        <button type="button" class="settings-nav-btn" data-section="appearance">Appearance</button>
+        <button type="button" class="settings-nav-btn" data-section="security">Security</button>
+        <button type="button" class="settings-nav-btn danger" data-section="danger">Account Management</button>
+      </aside>
+
+      <div class="settings-panels" id="settings-panels">
+        <button type="button" class="settings-back" id="settings-back">← All settings</button>
+
+        <!-- ---------- Account ---------- -->
+        <div class="settings-panel active" data-panel="account">
+          <h3>Account</h3>
+          <p class="panel-sub">Your login details and account information.</p>
+
+          <div class="card settings-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Username</div>
+                <div class="setting-value" id="set-acc-username">@—</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-xs" id="set-goto-profile">Change Username</button>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Display name</div>
+                <div class="setting-value" id="set-acc-display">—</div>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Email</div>
+                <div class="setting-value" id="set-acc-email">—</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-xs" id="set-email-open">Change Email</button>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Member since</div>
+                <div class="setting-value" id="set-acc-since">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inline email editor -->
+          <form class="card settings-card pad hidden" id="set-email-form">
+            <div class="setting-label">New email address</div>
+            <input type="email" id="set-email-input" class="text-input" placeholder="you@example.com" maxlength="120" autocomplete="email">
+            <div class="setting-label">Confirm with your password</div>
+            <input type="password" id="set-email-pw" class="text-input" placeholder="Password" autocomplete="current-password">
+            <p class="form-error" id="set-email-error"></p>
+            <div class="modal-actions">
+              <div class="modal-actions-right">
+                <button type="button" class="btn btn-secondary" id="set-email-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Email</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Change password (the spec's mockup puts this under Account) -->
+          <form class="card settings-card pad" id="set-pw-form">
+            <div class="setting-label">Change Password</div>
+            <div class="stack">
+              <input type="password" id="set-current-pw" class="text-input" placeholder="Current Password" autocomplete="current-password">
+              <input type="password" id="set-new-pw" class="text-input" placeholder="New Password" autocomplete="new-password">
+              <input type="password" id="set-confirm-pw" class="text-input" placeholder="Confirm New Password" autocomplete="new-password">
+            </div>
+            <div class="pw-meter" id="pw-meter">
+              <span class="pw-bars"><span class="pw-bar" id="pw-b1"></span><span class="pw-bar" id="pw-b2"></span><span class="pw-bar" id="pw-b3"></span></span>
+              <span class="pw-word" id="pw-word">Password strength</span>
+            </div>
+            <p class="form-error" id="set-pw-error"></p>
+            <button type="submit" class="btn btn-primary" id="set-pw-submit">Change Password</button>
+          </form>
+        </div>
+
+        <!-- ---------- Profile ---------- -->
+        <div class="settings-panel" data-panel="profile">
+          <h3>Profile</h3>
+          <p class="panel-sub">How you appear across Frenza.</p>
+
+          <div class="card settings-card pad">
+            <div class="settings-preview">
+              <span class="pv-avatar-wrap"><span class="avatar avatar-lg" id="pv-avatar"></span></span>
+              <div>
+                <div class="pv-name" id="pv-name">—</div>
+                <div class="pv-handle" id="pv-handle">@—</div>
+                <div class="pv-handle" id="pv-bio-line"></div>
+              </div>
+            </div>
+
+            <form id="set-profile-form">
+              <label class="field-label" for="pf-display">Display name</label>
+              <input type="text" id="pf-display" class="text-input" placeholder="John Doe" maxlength="40">
+
+              <label class="field-label" for="pf-username">Username</label>
+              <input type="text" id="pf-username" class="text-input" maxlength="20" autocomplete="username">
+              <p class="form-note">3–20 characters: letters, numbers, underscore or period. Your posts, friends and messages keep following you.</p>
+
+              <label class="field-label" for="pf-bio">Bio</label>
+              <textarea id="pf-bio" class="text-input" rows="3" maxlength="300" placeholder="Tell people a little about you."></textarea>
+
+              <label class="field-label">Profile picture</label>
+              <div class="setting-row" style="border:0;padding:0">
+                <span class="avatar avatar-lg" id="pf-avatar-preview"></span>
+                <input type="file" id="pf-avatar-file" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+              </div>
+
+              <label class="field-label">Profile banner</label>
+              <input type="file" id="pf-banner-file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+              <p class="form-note">JPG, PNG or WEBP &middot; max 8MB.
+                <button type="button" class="link-btn" id="pf-banner-remove">Remove banner</button>
+              </p>
+
+              <p class="form-error" id="set-profile-error"></p>
+              <button type="submit" class="btn btn-primary" id="pf-submit" style="margin-top:14px">Save Changes</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ---------- Privacy ---------- -->
+        <div class="settings-panel" data-panel="privacy">
+          <h3>Privacy</h3>
+          <p class="panel-sub">Enforced by the server — changing these changes what other people can actually reach.</p>
+
+          <div class="card settings-card">
+            <div class="setting-row top">
+              <div>
+                <div class="setting-label">Profile visibility</div>
+                <div class="setting-help">Friends only hides your profile, posts, follower lists and presence from anyone who isn't a friend.</div>
+              </div>
+              <div class="segmented" data-setting="profile_visibility">
+                <button type="button" data-value="public">Public</button>
+                <button type="button" data-value="friends">Friends only</button>
+              </div>
+            </div>
+
+            <div class="setting-row top">
+              <div>
+                <div class="setting-label">Who can send friend requests</div>
+                <div class="setting-help">Friends of friends means you must share at least one mutual friend.</div>
+              </div>
+              <div class="segmented" data-setting="friend_request_privacy">
+                <button type="button" data-value="everyone">Everyone</button>
+                <button type="button" data-value="friends_of_friends">Friends of friends</button>
+                <button type="button" data-value="nobody">Nobody</button>
+              </div>
+            </div>
+
+            <div class="setting-row top">
+              <div>
+                <div class="setting-label">Who can message me</div>
+                <div class="setting-help">Controls starting new conversations. Existing chats and their history are never affected.</div>
+              </div>
+              <div class="segmented" data-setting="message_privacy">
+                <button type="button" data-value="friends">Friends only</button>
+                <button type="button" data-value="everyone">Everyone</button>
+                <button type="button" data-value="nobody">Nobody</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Show my online status</div>
+                <div class="setting-help">When off nobody sees you as online — your connection is never announced.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" data-flag="show_online_status" aria-label="Show my online status">
+                <span class="track"></span><span class="knob"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Show my last seen</div>
+                <div class="setting-help">When off, your last-seen timestamp is never sent to anyone.</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" data-flag="show_last_seen" aria-label="Show my last seen">
+                <span class="track"></span><span class="knob"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- Notifications ---------- -->
+        <div class="settings-panel" data-panel="notifications">
+          <h3>Notifications</h3>
+          <p class="panel-sub">Switch off anything you don't want to be pinged about. Changes save as you tap them.</p>
+
+          <div class="card settings-card">
+            <div class="setting-row">
+              <div class="setting-label">Friend requests</div>
+              <label class="switch"><input type="checkbox" data-flag="friend_request_notifications" aria-label="Friend request notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">Messages</div>
+              <label class="switch"><input type="checkbox" data-flag="message_notifications" aria-label="Message notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">Group messages</div>
+              <label class="switch"><input type="checkbox" data-flag="group_notifications" aria-label="Group message notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">Likes</div>
+              <label class="switch"><input type="checkbox" data-flag="like_notifications" aria-label="Like notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">Comments</div>
+              <label class="switch"><input type="checkbox" data-flag="comment_notifications" aria-label="Comment notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">New followers</div>
+              <label class="switch"><input type="checkbox" data-flag="follower_notifications" aria-label="Follower notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">Other notifications</div>
+              <label class="switch"><input type="checkbox" data-flag="other_notifications" aria-label="Other notifications"><span class="track"></span><span class="knob"></span></label>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Notification sounds</div>
+                <div class="setting-help">Plays a short ping for incoming messages, friend requests, likes, comments and every other pop-up. Saved on this device.</div>
+              </div>
+              <label class="switch"><input type="checkbox" id="sound-toggle" aria-label="Notification sounds"><span class="track"></span><span class="knob"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- Appearance ---------- -->
+        <div class="settings-panel" data-panel="appearance">
+          <h3>Appearance</h3>
+          <p class="panel-sub">Applies instantly and is remembered on this device even when you're signed out.</p>
+
+          <div class="card settings-card">
+            <div class="setting-row top">
+              <div>
+                <div class="setting-label">Theme</div>
+                <div class="setting-help">System follows your device's light/dark setting automatically.</div>
+              </div>
+              <div class="segmented" data-setting="theme">
+                <button type="button" data-value="light">Light mode</button>
+                <button type="button" data-value="dark">Dark mode</button>
+                <button type="button" data-value="system">System default</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- Security ---------- -->
+        <div class="settings-panel" data-panel="security">
+          <h3>Security</h3>
+          <p class="panel-sub">Keep control of who is signed in to your account.</p>
+
+          <div class="card settings-card">
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Change Password</div>
+                <div class="setting-help">Requires your current password.</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-xs" id="set-goto-pw">Go to password</button>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Log out of all other devices</div>
+                <div class="setting-help">Ends every session except the one you're using right now.</div>
+              </div>
+              <button type="button" class="btn btn-danger btn-xs" id="set-logout-others">Log out of all other devices</button>
+            </div>
+          </div>
+
+          <div class="card settings-card">
+            <div class="setting-row" style="border-bottom:0">
+              <div class="setting-label">Active sessions</div>
+            </div>
+            <div id="set-sessions"><div class="empty-state small">Loading…</div></div>
+          </div>
+        </div>
+
+        <!-- ---------- Account management ---------- -->
+        <div class="settings-panel" data-panel="danger">
+          <h3>Account Management</h3>
+          <p class="panel-sub">These two actions are different: deactivating is reversible, deleting is not.</p>
+
+          <div class="card settings-card danger-card">
+            <div class="danger-row">
+              <div>
+                <div class="setting-label">Deactivate Account</div>
+                <div class="setting-help">Your profile and account are hidden until you log in again. Nothing is deleted — logging back in restores everything.</div>
+              </div>
+              <button type="button" class="btn btn-danger btn-xs" id="set-deactivate">Deactivate Account</button>
+            </div>
+          </div>
+
+          <div class="card settings-card danger-card">
+            <div class="danger-row">
+              <div>
+                <div class="setting-label danger-title">Delete Account</div>
+                <div class="setting-help">Permanent. Your profile, posts, comments, likes, friends, groups and messages are all removed. This cannot be undone.</div>
+              </div>
+              <button type="button" class="btn btn-danger btn-xs" id="set-delete">Delete Account</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- Followers / Following list modal -->
+  <div id="follow-list-modal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="follow-list-title">Followers</h3>
+        <button class="modal-close" id="follow-list-close" aria-label="Close">✕</button>
+      </div>
+      <div id="follow-list-body" class="user-list"></div>
+    </div>
+  </div>
+
+  <!-- Banner editor modal -->
+  <div id="banner-modal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3>Edit Banner</h3>
+        <button class="modal-close" id="banner-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="banner-preview-wrap hidden" id="banner-preview-wrap">
+        <img id="banner-preview" alt="Banner preview">
+      </div>
+      <p class="banner-hint">JPG, PNG or WEBP &middot; max 8MB</p>
+      <input type="file" id="banner-file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      <p class="form-error" id="banner-error"></p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="banner-remove-btn">Remove Banner</button>
+        <div class="modal-actions-right">
+          <button class="btn btn-secondary" id="banner-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="banner-save-btn" disabled>Upload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share menu -->
+  <div id="share-modal" class="modal-backdrop hidden">
+    <div class="modal-card share-card" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <div class="modal-head">
+        <h3 id="share-title">Share post</h3>
+        <button class="modal-close" id="share-close" aria-label="Close">✕</button>
+      </div>
+      <div class="share-link" id="share-link"></div>
+      <div class="share-actions">
+        <button type="button" class="share-option" id="share-copy">
+          <span class="share-ico">🔗</span><span>Copy Link</span>
+        </button>
+        <button type="button" class="share-option" id="share-native">
+          <span class="share-ico">📤</span><span>Share</span>
+        </button>
+      </div>
+      <p class="share-note" id="share-note"></p>
+    </div>
+  </div>
+
+  <!-- Create group modal -->
+  <div id="group-modal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="group-title">
+      <div class="modal-head">
+        <h3 id="group-title">Create Group</h3>
+        <button class="modal-close" id="group-close" aria-label="Close">✕</button>
+      </div>
+
+      <label class="field-label" for="group-name">Group name</label>
+      <input type="text" id="group-name" class="text-input" placeholder="Gaming Squad" maxlength="60">
+
+      <label class="field-label">Group image <span class="muted">(optional)</span></label>
+      <div class="group-avatar-row">
+        <span class="avatar avatar-lg" id="group-avatar-preview"></span>
+        <input type="file" id="group-avatar-file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      </div>
+
+      <label class="field-label">Select friends</label>
+      <div id="group-friends" class="check-list">
+        <div class="empty-state small">Loading friends...</div>
+      </div>
+
+      <p class="form-error" id="group-error"></p>
+
+      <div class="modal-actions">
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="group-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="group-submit">Create Group</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group members modal (roles, admin controls, leave) -->
+  <div id="members-modal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="members-title">
+      <div class="modal-head">
+        <h3 id="members-title">Members</h3>
+        <button class="modal-close" id="members-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="member-toolbar hidden" id="member-toolbar">
+        <button type="button" class="link-btn" id="group-rename-btn">Rename group</button>
+        <button type="button" class="link-btn" id="group-image-btn">Change image</button>
+        <button type="button" class="link-btn" id="group-add-btn">+ Add friends</button>
+        <input type="file" id="group-image-file" class="hidden" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      </div>
+
+      <div class="rename-row hidden" id="rename-row">
+        <input type="text" id="rename-input" class="text-input" maxlength="60">
+        <button type="button" class="btn btn-primary btn-xs" id="rename-save">Save</button>
+      </div>
+
+      <div id="members-list" class="members-list"></div>
+      <div id="add-friend-list" class="check-list hidden"></div>
+
+      <p class="form-error" id="members-error"></p>
+
+      <div class="modal-actions" id="members-actions">
+        <button type="button" class="btn btn-danger" id="members-leave-btn">Leave Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic confirmation dialog. One reusable box instead of a bespoke
+       modal per destructive action (unfriend, etc.). -->
+  <div id="confirm-modal" class="modal-backdrop hidden">
+    <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-head">
+        <h3 id="confirm-title">Are you sure?</h3>
+        <button class="modal-close" id="confirm-close" aria-label="Close">✕</button>
+      </div>
+      <p class="confirm-body" id="confirm-body"></p>
+      <div class="modal-actions">
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+          <button type="button" class="btn btn-danger confirm-ok" id="confirm-ok">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete account dialog. Separate from the generic confirm box because it
+       must collect a password AND an explicit typed confirmation — it can
+       never be satisfied by a single careless click. -->
+  <div id="delete-modal" class="modal-backdrop hidden">
+    <div class="modal-card confirm-card" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+      <div class="modal-head">
+        <h3 id="delete-title" class="danger-title">Delete your account</h3>
+        <button class="modal-close" id="delete-close" aria-label="Close">✕</button>
+      </div>
+      <p class="confirm-body">
+        This permanently removes your profile, posts, comments, likes, friends,
+        groups and messages. It cannot be undone.
+      </p>
+      <form id="delete-form">
+        <label class="field-label" for="delete-pw">Confirm your password</label>
+        <input type="password" id="delete-pw" class="text-input" placeholder="Password" autocomplete="current-password">
+        <label class="field-label" for="delete-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <input type="text" id="delete-confirm" class="text-input" placeholder="DELETE" autocomplete="off" spellcheck="false">
+        <p class="form-error" id="delete-error"></p>
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="btn btn-secondary" id="delete-cancel">Cancel</button>
+            <button type="submit" class="btn btn-danger" id="delete-ok" disabled>Delete Account</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav">
+    <button class="mnav-btn active" data-nav="feed">
+      <span class="mnav-icon">🏠</span><span>Home</span>
+    </button>
+    <button class="mnav-btn" data-nav="create">
+      <span class="mnav-icon">➕</span><span>Create</span>
+    </button>
+    <button class="mnav-btn" data-nav="friends">
+      <span class="mnav-icon">👥</span><span>Friends</span>
+    </button>
+    <button class="mnav-btn" data-nav="chats">
+      <span class="mnav-icon">💬</span><span>Chats<span class="nav-badge hidden" data-unread-badge></span></span>
+    </button>
+    <button class="mnav-btn" data-nav="search">
+      <span class="mnav-icon">🔍</span><span>Search</span>
+    </button>
+    <button class="mnav-btn" data-nav="profile">
+      <span class="mnav-icon">👤</span><span>Profile</span>
+    </button>
+    <button class="mnav-btn admin-nav hidden" data-nav="admin">
+      <span class="mnav-icon">🛡</span><span>Admin</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Comment modal / panel template lives inline per-post; toast container -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/api.js?v=__ASSET_VERSION__"></script>
+<script src="/js/sfx.js?v=__ASSET_VERSION__"></script>
+<script src="/js/app.js?v=__ASSET_VERSION__"></script>
+<script src="/js/admin.js?v=__ASSET_VERSION__"></script>
+</body>
+</html>
